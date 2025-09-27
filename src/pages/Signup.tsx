@@ -1,19 +1,28 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { FitnessCard, FitnessCardHeader, FitnessCardTitle, FitnessCardDescription, FitnessCardContent } from "@/components/ui/fitness-card";
 import { FitnessInput } from "@/components/ui/fitness-input";
 import { FitnessButton } from "@/components/ui/fitness-button";
+import { useAuth } from "@/hooks/useAuth";
 import gymBackground from "@/assets/gym-background.jpg";
 
 const Signup = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signUp, user } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Placeholder for registration logic
-    console.log("Signup attempt:", { name, email, password });
+    setLoading(true);
+    await signUp(email, password, name);
+    setLoading(false);
   };
 
   return (
@@ -105,8 +114,9 @@ const Signup = () => {
                 variant="accent" 
                 size="lg" 
                 className="w-full"
+                disabled={loading}
               >
-                CRIAR CONTA
+                {loading ? "CRIANDO CONTA..." : "CRIAR CONTA"}
               </FitnessButton>
             </form>
 

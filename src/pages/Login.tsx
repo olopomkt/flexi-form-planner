@@ -1,18 +1,27 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { FitnessCard, FitnessCardHeader, FitnessCardTitle, FitnessCardDescription, FitnessCardContent } from "@/components/ui/fitness-card";
 import { FitnessInput } from "@/components/ui/fitness-input";
 import { FitnessButton } from "@/components/ui/fitness-button";
+import { useAuth } from "@/hooks/useAuth";
 import gymBackground from "@/assets/gym-background.jpg";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn, user } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Placeholder for authentication logic
-    console.log("Login attempt:", { email, password });
+    setLoading(true);
+    await signIn(email, password);
+    setLoading(false);
   };
 
   return (
@@ -90,8 +99,9 @@ const Login = () => {
                 variant="primary" 
                 size="lg" 
                 className="w-full"
+                disabled={loading}
               >
-                ENTRAR
+                {loading ? "ENTRANDO..." : "ENTRAR"}
               </FitnessButton>
             </form>
 
