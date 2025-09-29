@@ -1,1 +1,4 @@
 project_id = "pjpuhvwjifjzrllyapuj"
+
+[functions.generate-planner]
+verify_jwt = true

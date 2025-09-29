@@ -14,6 +14,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { FitnessButton } from "@/components/ui/fitness-button";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const plannerSchema = z.object({
   nomeCompleto: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -58,8 +60,10 @@ const gruposMusculares = [
 export default function Planner() {
   const [showSuplemento, setShowSuplemento] = useState(false);
   const [showAnabolizante, setShowAnabolizante] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, session } = useAuth();
 
   const form = useForm<PlannerFormData>({
     resolver: zodResolver(plannerSchema),
@@ -68,13 +72,93 @@ export default function Planner() {
     },
   });
 
-  const onSubmit = (data: PlannerFormData) => {
-    console.log("Dados do formulário:", data);
-    toast({
-      title: "Formulário enviado!",
-      description: "Seu planner está sendo gerado...",
-    });
-    // TODO: Implementar lógica de geração do planner
+  const onSubmit = async (data: PlannerFormData) => {
+    if (!user || !session) {
+      toast({
+        title: "Erro de autenticação",
+        description: "Você precisa estar logado para gerar um planner.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // 1. Verificar créditos do usuário
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) {
+        throw new Error('Erro ao verificar créditos: ' + profileError.message);
+      }
+
+      if (!profile || profile.credits === 0) {
+        toast({
+          title: "Créditos insuficientes",
+          description: "Você não tem créditos suficientes. Por favor, adquira mais na página 'Adquirir Créditos'.",
+          variant: "destructive"
+        });
+        navigate('/credits');
+        return;
+      }
+
+      // 2. Deduzir 1 crédito
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ credits: profile.credits - 1 })
+        .eq('user_id', user.id);
+
+      if (updateError) {
+        throw new Error('Erro ao deduzir créditos: ' + updateError.message);
+      }
+
+      // 3. Chamar a Edge Function para gerar o planner
+      const { data: result, error: functionError } = await supabase.functions.invoke('generate-planner', {
+        body: { userInputs: data }
+      });
+
+      if (functionError) {
+        // Se der erro, devolver o crédito
+        await supabase
+          .from('profiles')
+          .update({ credits: profile.credits })
+          .eq('user_id', user.id);
+        
+        throw new Error('Erro ao gerar planner: ' + functionError.message);
+      }
+
+      if (!result?.id) {
+        // Se der erro, devolver o crédito
+        await supabase
+          .from('profiles')
+          .update({ credits: profile.credits })
+          .eq('user_id', user.id);
+        
+        throw new Error('Erro: ID do planner não retornado');
+      }
+
+      // 4. Redirecionar para a página de resultado
+      toast({
+        title: "Planner gerado com sucesso!",
+        description: "Redirecionando para os resultados...",
+      });
+
+      navigate(`/result/${result.id}`);
+
+    } catch (error) {
+      console.error('Erro ao gerar planner:', error);
+      toast({
+        title: "Erro ao gerar planner",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -674,8 +758,9 @@ export default function Planner() {
                     size="lg"
                     variant="primary"
                     className="px-12 py-4 text-lg"
+                    disabled={isLoading}
                   >
-                    Gerar Planner Completo
+                    {isLoading ? "Gerando Planner..." : "Gerar Planner Completo"}
                   </FitnessButton>
                 </div>
               </form>
