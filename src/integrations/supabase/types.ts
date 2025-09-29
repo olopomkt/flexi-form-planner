@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      planners_history: {
+        Row: {
+          ai_outputs: Json
+          created_at: string
+          id: string
+          user_id: string
+          user_inputs: Json
+        }
+        Insert: {
+          ai_outputs: Json
+          created_at?: string
+          id?: string
+          user_id: string
+          user_inputs: Json
+        }
+        Update: {
+          ai_outputs?: Json
+          created_at?: string
+          id?: string
+          user_id?: string
+          user_inputs?: Json
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
