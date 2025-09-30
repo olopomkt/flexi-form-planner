@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Coins } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Credits() {
   const [formData, setFormData] = useState({
@@ -15,6 +16,7 @@ export default function Credits() {
     email: "",
     quantidade: ""
   });
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const handleInputChange = (field: string, value: string) => {
@@ -24,7 +26,7 @@ export default function Credits() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validação básica
@@ -37,18 +39,44 @@ export default function Credits() {
       return;
     }
 
-    toast({
-      title: "Pedido enviado!",
-      description: "Seu pedido foi enviado com sucesso. Entraremos em contato em breve.",
-    });
+    setIsLoading(true);
 
-    // Limpar formulário
-    setFormData({
-      nomeCompleto: "",
-      whatsapp: "",
-      email: "",
-      quantidade: ""
-    });
+    try {
+      const { data, error } = await supabase.functions.invoke("request-credits", {
+        body: {
+          nomeCompleto: formData.nomeCompleto,
+          whatsapp: formData.whatsapp,
+          email: formData.email,
+          quantidade: parseInt(formData.quantidade)
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Pedido enviado com sucesso!",
+        description: "Entraremos em contato com você em breve pelo WhatsApp.",
+      });
+
+      // Limpar formulário
+      setFormData({
+        nomeCompleto: "",
+        whatsapp: "",
+        email: "",
+        quantidade: ""
+      });
+    } catch (error) {
+      console.error("Erro ao enviar pedido:", error);
+      toast({
+        title: "Erro ao enviar pedido",
+        description: "Ocorreu um problema ao enviar seu pedido. Por favor, tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const calcularTotal = () => {
@@ -189,8 +217,9 @@ export default function Credits() {
                         variant="accent"
                         size="lg"
                         className="px-8"
+                        disabled={isLoading}
                       >
-                        Enviar Pedido
+                        {isLoading ? "Enviando..." : "Enviar Pedido"}
                       </FitnessButton>
                     </div>
                   </form>
