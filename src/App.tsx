@@ -13,6 +13,7 @@ import Planner from "./pages/Planner";
 import History from "./pages/History";
 import Credits from "./pages/Credits";
 import Profile from "./pages/Profile";
+import Result from "./pages/Result";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,11 @@ const App = () => (
             <Route path="/profile" element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="/result/:id" element={
+              <ProtectedRoute>
+                <Result />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
