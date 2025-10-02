@@ -6,10 +6,12 @@ import { FitnessButton } from "@/components/ui/fitness-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { CreditCard, Coins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Credits() {
+  const { profile, plannersCount } = useAuth();
   const [formData, setFormData] = useState({
     nomeCompleto: "",
     whatsapp: "",
@@ -119,15 +121,15 @@ export default function Credits() {
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="text-center p-4 bg-muted rounded-lg">
-                      <div className="text-2xl font-bold text-primary">2</div>
+                      <div className="text-2xl font-bold text-primary">{profile?.credits || 0}</div>
                       <div className="text-sm text-muted-foreground">Créditos Disponíveis</div>
                     </div>
                     <div className="text-center p-4 bg-muted rounded-lg">
-                      <div className="text-2xl font-bold text-muted-foreground">0</div>
+                      <div className="text-2xl font-bold text-muted-foreground">{2 - (profile?.credits || 0)}</div>
                       <div className="text-sm text-muted-foreground">Créditos Utilizados</div>
                     </div>
                     <div className="text-center p-4 bg-muted rounded-lg">
-                      <div className="text-2xl font-bold text-muted-foreground">0</div>
+                      <div className="text-2xl font-bold text-muted-foreground">{plannersCount}</div>
                       <div className="text-sm text-muted-foreground">Planners Gerados</div>
                     </div>
                   </div>
@@ -135,13 +137,13 @@ export default function Credits() {
               </Card>
 
               {/* Card de Solicitação de Compra */}
-              <Card>
+              <Card className="border-2 border-primary/20 bg-muted/30">
                 <CardHeader>
-                  <CardTitle>Solicitar Compra de Créditos</CardTitle>
+                  <CardTitle className="text-2xl">Solicitar Compra de Créditos</CardTitle>
                   <CardDescription>
                     Preencha os dados abaixo para solicitar a compra de novos créditos.
                     <br />
-                    <strong>Preço: R$ 9,90 por crédito</strong>
+                    <strong className="text-primary text-lg">Preço: R$ 9,90 por crédito</strong>
                     <br />
                     Após o envio, nossa equipe entrará em contato para finalizar a compra.
                   </CardDescription>

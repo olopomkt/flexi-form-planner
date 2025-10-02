@@ -63,7 +63,7 @@ export default function Planner() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, session } = useAuth();
+  const { user, session, refreshUserData } = useAuth();
 
   const form = useForm<PlannerFormData>({
     resolver: zodResolver(plannerSchema),
@@ -141,7 +141,10 @@ export default function Planner() {
         throw new Error('Erro: ID do planner não retornado');
       }
 
-      // 4. Redirecionar para a página de resultado
+      // 4. Atualizar os dados do usuário no contexto
+      await refreshUserData();
+
+      // 5. Redirecionar para a página de resultado
       toast({
         title: "Planner gerado com sucesso!",
         description: "Redirecionando para os resultados...",

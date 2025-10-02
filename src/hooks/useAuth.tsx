@@ -8,6 +8,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: any | null;
+  plannersCount: number;
+  refreshUserData: () => Promise<void>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -20,8 +22,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
+  const [plannersCount, setPlannersCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  const refreshUserData = async () => {
+    if (!session?.user) return;
+
+    // Fetch user profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .single();
+    
+    if (profileData) {
+      setProfile(profileData);
+    }
+
+    // Count planners
+    const { count } = await supabase
+      .from('planners_history')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', session.user.id);
+    
+    setPlannersCount(count || 0);
+  };
 
   useEffect(() => {
     // Set up auth state listener
@@ -31,36 +57,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile
+          // Use the refresh function to load data
           setTimeout(async () => {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .single();
-            setProfile(profileData);
+            await refreshUserData();
           }, 0);
         } else {
           setProfile(null);
+          setPlannersCount(0);
         }
         setLoading(false);
       }
     );
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Fetch user profile
-        setTimeout(async () => {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single();
-          setProfile(profileData);
-        }, 0);
+        await refreshUserData();
       }
       setLoading(false);
     });
@@ -138,6 +152,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       session,
       profile,
+      plannersCount,
+      refreshUserData,
       signUp,
       signIn,
       signOut,

@@ -70,8 +70,23 @@ serve(async (req) => {
       throw new Error(`N8N webhook failed: ${n8nResponse.status} ${n8nResponse.statusText}`);
     }
 
-    const aiOutputs = await n8nResponse.json();
-    console.log('Received AI outputs from N8N:', aiOutputs);
+    // Parse the response from N8N - it's an array with the first element containing the output
+    const n8nResponseData = await n8nResponse.json();
+    console.log('Received raw response from N8N:', n8nResponseData);
+    
+    // Access the first element and get the output field
+    if (!Array.isArray(n8nResponseData) || n8nResponseData.length === 0) {
+      throw new Error('Invalid N8N response format: expected an array');
+    }
+    
+    const firstElement = n8nResponseData[0];
+    if (!firstElement.output) {
+      throw new Error('Invalid N8N response format: missing output field');
+    }
+    
+    // Parse the output string to get the final JSON object
+    const aiOutputs = JSON.parse(firstElement.output);
+    console.log('Parsed AI outputs:', aiOutputs);
 
     // Save to planners_history table
     const { data: plannerRecord, error: saveError } = await supabase

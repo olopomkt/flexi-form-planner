@@ -152,10 +152,10 @@ const Result = () => {
         <main className="flex-1 p-6 md:p-8 lg:p-12">
           <div id="planner-para-exportar" className="max-w-5xl mx-auto space-y-8">
             <div className="space-y-2">
-              <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                 Seu Planner de Treino Personalizado
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-sm md:text-base">
                 Seu planejamento estratégico para alcançar seus objetivos
               </p>
             </div>
@@ -168,7 +168,7 @@ const Result = () => {
                   <FitnessCardTitle>Visão Geral</FitnessCardTitle>
                 </FitnessCardHeader>
                 <FitnessCardContent>
-                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                  <p className="text-foreground whitespace-pre-wrap break-words leading-relaxed text-sm md:text-base">
                     {plannerData.visao_geral}
                   </p>
                 </FitnessCardContent>
@@ -181,7 +181,7 @@ const Result = () => {
                   <FitnessCardTitle>Seu Objetivo + Divisão de Treino Ideal</FitnessCardTitle>
                 </FitnessCardHeader>
                 <FitnessCardContent>
-                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                  <p className="text-foreground whitespace-pre-wrap break-words leading-relaxed text-sm md:text-base">
                     {plannerData.objetivo_divisao_treino}
                   </p>
                 </FitnessCardContent>
@@ -194,7 +194,7 @@ const Result = () => {
                   <FitnessCardTitle>Dicas de Treino - Músculo(s) em Ênfase</FitnessCardTitle>
                 </FitnessCardHeader>
                 <FitnessCardContent>
-                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                  <p className="text-foreground whitespace-pre-wrap break-words leading-relaxed text-sm md:text-base">
                     {plannerData.dicas_musculo_enfase}
                   </p>
                 </FitnessCardContent>
@@ -207,7 +207,7 @@ const Result = () => {
                   <FitnessCardTitle>Recomendações de Dieta e Suplementação</FitnessCardTitle>
                 </FitnessCardHeader>
                 <FitnessCardContent>
-                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                  <p className="text-foreground whitespace-pre-wrap break-words leading-relaxed text-sm md:text-base">
                     {plannerData.dieta_suplementacao}
                   </p>
                 </FitnessCardContent>
@@ -220,7 +220,7 @@ const Result = () => {
                   <FitnessCardTitle>Projeção de Resultados</FitnessCardTitle>
                 </FitnessCardHeader>
                 <FitnessCardContent>
-                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                  <p className="text-foreground whitespace-pre-wrap break-words leading-relaxed text-sm md:text-base">
                     {plannerData.tempo_medio_resultados}
                   </p>
                 </FitnessCardContent>
@@ -233,7 +233,7 @@ const Result = () => {
                   <FitnessCardTitle>Mentalidade e Motivação</FitnessCardTitle>
                 </FitnessCardHeader>
                 <FitnessCardContent>
-                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                  <p className="text-foreground whitespace-pre-wrap break-words leading-relaxed text-sm md:text-base">
                     {plannerData.dicas_mentalidade}
                   </p>
                 </FitnessCardContent>
@@ -246,18 +246,18 @@ const Result = () => {
                   <FitnessCardTitle>Análise Comparativa (Shape Atual x Projeção)</FitnessCardTitle>
                 </FitnessCardHeader>
                 <FitnessCardContent>
-                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                  <p className="text-foreground whitespace-pre-wrap break-words leading-relaxed text-sm md:text-base">
                     {plannerData.analise_shape}
                   </p>
                 </FitnessCardContent>
               </FitnessCard>
             )}
 
-            <div className="flex flex-wrap gap-4 pt-6">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-4 pt-6">
               <Button
                 onClick={() => navigate("/dashboard")}
                 variant="outline"
-                className="flex-1 min-w-[200px]"
+                className="flex-1 min-w-[150px]"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Voltar ao Painel Principal
@@ -265,7 +265,7 @@ const Result = () => {
               <Button
                 onClick={() => navigate("/history")}
                 variant="outline"
-                className="flex-1 min-w-[200px]"
+                className="flex-1 min-w-[150px]"
               >
                 <History className="mr-2 h-4 w-4" />
                 Ver Histórico
@@ -273,7 +273,7 @@ const Result = () => {
               <Button
                 onClick={handleExportPDF}
                 variant="default"
-                className="flex-1 min-w-[200px]"
+                className="flex-1 min-w-[150px]"
                 disabled={isExporting}
               >
                 <FileDown className="mr-2 h-4 w-4" />

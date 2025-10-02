@@ -9,7 +9,7 @@ import { Target, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
-  const { profile, user } = useAuth();
+  const { profile, user, plannersCount } = useAuth();
   const navigate = useNavigate();
 
   const handleGeneratePlanner = () => {
@@ -104,7 +104,7 @@ const Dashboard = () => {
                 <FitnessCard>
                   <FitnessCardContent className="pt-6">
                     <div className="text-center space-y-2">
-                      <div className="text-2xl font-bold text-primary">0</div>
+                      <div className="text-2xl font-bold text-primary">{plannersCount}</div>
                       <div className="text-sm text-muted-foreground">Planners Criados</div>
                     </div>
                   </FitnessCardContent>

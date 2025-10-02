@@ -4,12 +4,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FitnessCard, FitnessCardContent, FitnessCardHeader, FitnessCardTitle } from "@/components/ui/fitness-card";
 import { FitnessButton } from "@/components/ui/fitness-button";
 import { useNavigate } from "react-router-dom";
-import { Target, History as HistoryIcon, Calendar } from "lucide-react";
+import { Target, History as HistoryIcon, Calendar, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface PlannerRecord {
   id: string;
@@ -21,7 +33,8 @@ interface PlannerRecord {
 
 export default function History() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUserData } = useAuth();
+  const { toast } = useToast();
   const [planners, setPlanners] = useState<PlannerRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,6 +60,35 @@ export default function History() {
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
+
+  const handleDelete = async (plannerId: string) => {
+    try {
+      const { error } = await supabase
+        .from('planners_history')
+        .delete()
+        .eq('id', plannerId);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setPlanners(prev => prev.filter(p => p.id !== plannerId));
+      
+      // Refresh user data to update counts
+      await refreshUserData();
+
+      toast({
+        title: "Planner deletado",
+        description: "O planner foi removido com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao deletar planner:', error);
+      toast({
+        title: "Erro ao deletar",
+        description: "Não foi possível deletar o planner. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -100,8 +142,7 @@ export default function History() {
                 {planners.map((planner) => (
                   <FitnessCard
                     key={planner.id}
-                    className="cursor-pointer hover:scale-105 transition-transform duration-300"
-                    onClick={() => navigate(`/result/${planner.id}`)}
+                    className="hover:scale-105 transition-transform duration-300 relative"
                   >
                     <FitnessCardHeader>
                       <div className="flex items-center gap-2 mb-3">
@@ -115,7 +156,10 @@ export default function History() {
                       </p>
                     </FitnessCardHeader>
                     <FitnessCardContent>
-                      <div className="flex items-start gap-2">
+                      <div 
+                        className="flex items-start gap-2 cursor-pointer mb-4"
+                        onClick={() => navigate(`/result/${planner.id}`)}
+                      >
                         <Target className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
                         <div>
                           <p className="text-xs font-medium text-muted-foreground mb-1">
@@ -126,6 +170,37 @@ export default function History() {
                           </p>
                         </div>
                       </div>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <FitnessButton
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-destructive/50 text-destructive hover:bg-destructive hover:text-white"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Deletar
+                          </FitnessButton>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja deletar este planner? A ação é irreversível.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(planner.id)}
+                              className="bg-destructive hover:bg-destructive/90"
+                            >
+                              Deletar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </FitnessCardContent>
                   </FitnessCard>
                 ))}

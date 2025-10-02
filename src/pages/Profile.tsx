@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { User, Mail, LogOut } from "lucide-react";
 
 export default function Profile() {
-  const { user, signOut } = useAuth();
+  const { user, profile, plannersCount, signOut } = useAuth();
 
   const handleLogout = async () => {
     await signOut();
@@ -121,15 +121,15 @@ export default function Profile() {
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="text-center p-4 bg-muted rounded-lg">
-                      <div className="text-2xl font-bold text-primary">2</div>
+                      <div className="text-2xl font-bold text-primary">{profile?.credits || 0}</div>
                       <div className="text-sm text-muted-foreground">Créditos Disponíveis</div>
                     </div>
                     <div className="text-center p-4 bg-muted rounded-lg">
-                      <div className="text-2xl font-bold text-muted-foreground">0</div>
+                      <div className="text-2xl font-bold text-muted-foreground">{plannersCount}</div>
                       <div className="text-sm text-muted-foreground">Planners Gerados</div>
                     </div>
                     <div className="text-center p-4 bg-muted rounded-lg">
-                      <div className="text-2xl font-bold text-muted-foreground">0</div>
+                      <div className="text-2xl font-bold text-muted-foreground">{profile?.created_at ? Math.floor((new Date().getTime() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0}</div>
                       <div className="text-sm text-muted-foreground">Dias de Uso</div>
                     </div>
                   </div>
