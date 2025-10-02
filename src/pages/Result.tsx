@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, ArrowLeft, History, FileDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 interface PlannerOutput {
   visao_geral?: string;
@@ -25,6 +27,62 @@ const Result = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [plannerData, setPlannerData] = useState<PlannerOutput | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportPDF = async () => {
+    const elemento = document.getElementById("planner-para-exportar");
+    if (!elemento) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível encontrar o conteúdo para exportar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExporting(true);
+    
+    try {
+      const canvas = await html2canvas(elemento, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#0a0a0a",
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 0;
+
+      pdf.addImage(imgData, "PNG", imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      pdf.save(`Treino-Planner-${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}.pdf`);
+
+      toast({
+        title: "PDF exportado com sucesso!",
+        description: "Seu planner foi baixado.",
+      });
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      toast({
+        title: "Erro ao exportar",
+        description: "Não foi possível gerar o PDF. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     const fetchPlanner = async () => {
@@ -92,7 +150,7 @@ const Result = () => {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <main className="flex-1 p-6 md:p-8 lg:p-12">
-          <div className="max-w-5xl mx-auto space-y-8">
+          <div id="planner-para-exportar" className="max-w-5xl mx-auto space-y-8">
             <div className="space-y-2">
               <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                 Seu Planner de Treino Personalizado
@@ -213,17 +271,13 @@ const Result = () => {
                 Ver Histórico
               </Button>
               <Button
-                onClick={() => {
-                  toast({
-                    title: "Em breve",
-                    description: "A funcionalidade de exportar em PDF será implementada em breve.",
-                  });
-                }}
+                onClick={handleExportPDF}
                 variant="default"
                 className="flex-1 min-w-[200px]"
+                disabled={isExporting}
               >
                 <FileDown className="mr-2 h-4 w-4" />
-                Exportar em PDF
+                {isExporting ? "Gerando PDF..." : "Exportar em PDF"}
               </Button>
             </div>
           </div>
