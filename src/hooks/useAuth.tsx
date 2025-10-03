@@ -27,39 +27,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   const refreshUserData = async () => {
-    if (!session?.user) return;
-
-    // Fetch user profile
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .single();
-    
-    if (profileData) {
-      setProfile(profileData);
+    const currentUser = user || session?.user;
+    if (!currentUser) {
+      setProfile(null);
+      setPlannersCount(0);
+      return;
     }
 
-    // Count planners
-    const { count } = await supabase
-      .from('planners_history')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', session.user.id);
-    
-    setPlannersCount(count || 0);
+    // Buscar perfil e contagem de planners em paralelo
+    const [profileResponse, countResponse] = await Promise.all([
+      supabase.from('profiles').select('*').eq('user_id', currentUser.id).single(),
+      supabase.from('planners_history').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id)
+    ]);
+
+    if (profileResponse.data) {
+      setProfile(profileResponse.data);
+    }
+    if (countResponse.count !== null) {
+      setPlannersCount(countResponse.count);
+    }
   };
 
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
-        setUser(session?.user ?? null);
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
         
-        if (session?.user) {
-          // Use the refresh function to load data
-          setTimeout(async () => {
-            await refreshUserData();
+        if (currentUser) {
+          // Defer the data fetch to avoid blocking the auth callback
+          setTimeout(() => {
+            refreshUserData();
           }, 0);
         } else {
           setProfile(null);
