@@ -73,90 +73,39 @@ export default function Planner() {
   });
 
   const onSubmit = async (data: PlannerFormData) => {
-    if (!user || !session) {
-      toast({
-        title: "Erro de autenticação",
-        description: "Você precisa estar logado para gerar um planner.",
-        variant: "destructive"
-      });
+    if (!user) {
+      toast({ title: "Erro", description: "Você precisa estar logado.", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // 1. Verificar créditos do usuário
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profileError) {
-        throw new Error('Erro ao verificar créditos: ' + profileError.message);
-      }
-
-      if (!profile || profile.credits === 0) {
-        toast({
-          title: "Créditos insuficientes",
-          description: "Você não tem créditos suficientes. Por favor, adquira mais na página 'Adquirir Créditos'.",
-          variant: "destructive"
-        });
-        navigate('/credits');
-        return;
-      }
-
-      // 2. Deduzir 1 crédito
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ credits: profile.credits - 1 })
-        .eq('user_id', user.id);
-
-      if (updateError) {
-        throw new Error('Erro ao deduzir créditos: ' + updateError.message);
-      }
-
-      // 3. Chamar a Edge Function para gerar o planner
-      const { data: result, error: functionError } = await supabase.functions.invoke('generate-planner', {
+      const { data: result, error } = await supabase.functions.invoke('generate-planner', {
         body: { userInputs: data }
       });
 
-      if (functionError) {
-        // Se der erro, devolver o crédito
-        await supabase
-          .from('profiles')
-          .update({ credits: profile.credits })
-          .eq('user_id', user.id);
-        
-        throw new Error('Erro ao gerar planner: ' + functionError.message);
+      if (error) {
+        // Erros da Edge Function agora serão mais claros.
+        throw new Error(error.message);
       }
-
-      if (!result?.id) {
-        // Se der erro, devolver o crédito
-        await supabase
-          .from('profiles')
-          .update({ credits: profile.credits })
-          .eq('user_id', user.id);
-        
-        throw new Error('Erro: ID do planner não retornado');
+      
+      if (result && result.id) {
+        toast({
+          title: "Planner gerado com sucesso!",
+          description: "Redirecionando para os resultados...",
+        });
+        navigate(`/result/${result.id}`);
+      } else {
+        // Se a função não retornar um ID, algo deu errado.
+        throw new Error(result.error || "A geração do planner falhou e não retornou um ID.");
       }
-
-      // 4. Atualizar os dados do usuário no contexto
-      await refreshUserData();
-
-      // 5. Redirecionar para a página de resultado
-      toast({
-        title: "Planner gerado com sucesso!",
-        description: "Redirecionando para os resultados...",
-      });
-
-      navigate(`/result/${result.id}`);
 
     } catch (error) {
-      console.error('Erro ao gerar planner:', error);
+      console.error('Erro ao invocar a função de geração:', error);
       toast({
-        title: "Erro ao gerar planner",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
+        title: "Erro Crítico ao Gerar Planner",
+        description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido. O crédito não foi debitado.",
         variant: "destructive"
       });
     } finally {
