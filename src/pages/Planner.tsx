@@ -81,23 +81,23 @@ export default function Planner() {
     setIsLoading(true);
 
     try {
+      // Apenas invoca a função. Toda a lógica de crédito e salvamento está no backend.
       const { data: result, error } = await supabase.functions.invoke('generate-planner', {
         body: { userInputs: data }
       });
 
       if (error) {
-        // Erros da Edge Function agora serão mais claros.
         throw new Error(error.message);
       }
       
       if (result && result.id) {
+        await refreshUserData(); // Atualiza os dados globalmente
         toast({
           title: "Planner gerado com sucesso!",
           description: "Redirecionando para os resultados...",
         });
         navigate(`/result/${result.id}`);
       } else {
-        // Se a função não retornar um ID, algo deu errado.
         throw new Error(result.error || "A geração do planner falhou e não retornou um ID.");
       }
 
@@ -105,9 +105,10 @@ export default function Planner() {
       console.error('Erro ao invocar a função de geração:', error);
       toast({
         title: "Erro Crítico ao Gerar Planner",
-        description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido. O crédito não foi debitado.",
+        description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido.",
         variant: "destructive"
       });
+      await refreshUserData(); // Atualiza os dados mesmo em caso de erro para reverter visualmente
     } finally {
       setIsLoading(false);
     }
