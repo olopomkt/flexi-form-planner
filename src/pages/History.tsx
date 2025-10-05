@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FitnessCard, FitnessCardContent, FitnessCardHeader, FitnessCardTitle } from "@/components/ui/fitness-card";
 import { FitnessButton } from "@/components/ui/fitness-button";
 import { useNavigate } from "react-router-dom";
-import { Target, History as HistoryIcon, Calendar, Trash2 } from "lucide-react";
+import { Target, History as HistoryIcon, Calendar, Trash2, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,7 +27,7 @@ interface PlannerRecord {
   id: string;
   created_at: string;
   user_inputs: {
-    objetivo?: string;
+    objetivoPrincipal?: string;
   };
 }
 
@@ -41,7 +41,6 @@ export default function History() {
   useEffect(() => {
     const fetchPlanners = async () => {
       if (!user) return;
-
       setLoading(true);
       const { data, error } = await supabase
         .from("planners_history")
@@ -49,45 +48,28 @@ export default function History() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-      if (!error && data) {
+      if (error) {
+        toast({ title: "Erro", description: "Não foi possível carregar o histórico.", variant: "destructive" });
+      } else if (data) {
         setPlanners(data as PlannerRecord[]);
       }
       setLoading(false);
     };
-
     fetchPlanners();
-  }, [user]);
+  }, [user, toast]);
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
   };
 
   const handleDelete = async (plannerId: string) => {
-    try {
-      const { error } = await supabase
-        .from('planners_history')
-        .delete()
-        .eq('id', plannerId);
-
-      if (error) throw error;
-
-      // Remove from local state
+    const { error } = await supabase.from('planners_history').delete().eq('id', plannerId);
+    if (error) {
+      toast({ title: "Erro ao deletar", description: error.message, variant: "destructive" });
+    } else {
       setPlanners(prev => prev.filter(p => p.id !== plannerId));
-      
-      // Refresh user data to update counts
       await refreshUserData();
-
-      toast({
-        title: "Planner deletado",
-        description: "O planner foi removido com sucesso.",
-      });
-    } catch (error) {
-      console.error('Erro ao deletar planner:', error);
-      toast({
-        title: "Erro ao deletar",
-        description: "Não foi possível deletar o planner. Tente novamente.",
-        variant: "destructive"
-      });
+      toast({ title: "Sucesso", description: "Planner deletado permanentemente." });
     }
   };
 
@@ -103,17 +85,17 @@ export default function History() {
                   <HistoryIcon className="h-5 w-5 text-white" />
                 </div>
                 <h1 className="text-3xl font-bold text-foreground">
-                  Meu Histórico de Planners
+                  Histórico de Planners
                 </h1>
               </div>
               <p className="text-muted-foreground">
-                Visualize todos os planners que você já gerou
+                Todos os planners que você já gerou
               </p>
             </div>
 
             {loading ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">Carregando...</p>
+              <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : planners.length === 0 ? (
               <Card className="text-center p-12">
@@ -121,87 +103,60 @@ export default function History() {
                   <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                     <Target className="h-8 w-8 text-muted-foreground" />
                   </div>
-                  <CardTitle className="text-xl">Nenhum planner gerado ainda</CardTitle>
-                  <CardDescription className="text-base">
-                    Você ainda não gerou nenhum planner. Seus planos salvos aparecerão aqui.
+                  <CardTitle>Nenhum planner gerado ainda</CardTitle>
+                  <CardDescription>
+                    Crie seu primeiro planner personalizado para começar sua jornada fitness!
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <FitnessButton
+                    onClick={() => navigate('/planner')}
                     variant="primary"
                     size="lg"
-                    onClick={() => navigate("/planner")}
-                    className="px-8"
                   >
-                    Gerar Novo Planner
+                    <Target className="h-5 w-5 mr-2" />
+                    GERAR PRIMEIRO PLANNER
                   </FitnessButton>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {planners.map((planner) => (
-                  <FitnessCard
-                    key={planner.id}
-                    className="hover:scale-105 transition-transform duration-300 relative"
-                  >
-                    <FitnessCardHeader>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        <FitnessCardTitle className="text-lg">
-                          Planner Gerado em:
-                        </FitnessCardTitle>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {formatDate(planner.created_at)}
-                      </p>
-                    </FitnessCardHeader>
-                    <FitnessCardContent>
-                      <div 
-                        className="flex items-start gap-2 cursor-pointer mb-4"
-                        onClick={() => navigate(`/result/${planner.id}`)}
-                      >
-                        <Target className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">
-                            Objetivo:
-                          </p>
-                          <p className="text-sm text-foreground">
-                            {planner.user_inputs?.objetivo || "Não especificado"}
-                          </p>
+                  <FitnessCard key={planner.id} className="flex flex-col justify-between">
+                    <div className="cursor-pointer" onClick={() => navigate(`/result/${planner.id}`)}>
+                      <FitnessCardHeader>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Calendar className="h-4 w-4 text-primary" />
+                          <FitnessCardTitle className="text-lg">Gerado em:</FitnessCardTitle>
                         </div>
-                      </div>
-                      
+                        <p className="text-sm text-muted-foreground">{formatDate(planner.created_at)}</p>
+                      </FitnessCardHeader>
+                      <FitnessCardContent>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Objetivo:</p>
+                        <p className="text-sm text-foreground capitalize">
+                          {(planner.user_inputs?.objetivoPrincipal || "Não especificado").replace(/_/g, ' ')}
+                        </p>
+                      </FitnessCardContent>
+                    </div>
+                    <div className="p-4 pt-0">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <FitnessButton
-                            variant="outline"
-                            size="sm"
-                            className="w-full border-destructive/50 text-destructive hover:bg-destructive hover:text-white"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Deletar
+                          <FitnessButton variant="outline" className="w-full border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground">
+                            <Trash2 className="h-4 w-4 mr-2" /> Deletar
                           </FitnessButton>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja deletar este planner? A ação é irreversível.
-                            </AlertDialogDescription>
+                            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                            <AlertDialogDescription>Esta ação não pode ser desfeita. Isso irá deletar permanentemente seu planner.</AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(planner.id)}
-                              className="bg-destructive hover:bg-destructive/90"
-                            >
-                              Deletar
-                            </AlertDialogAction>
+                            <AlertDialogAction onClick={() => handleDelete(planner.id)} className="bg-destructive hover:bg-destructive/80">Confirmar Exclusão</AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
-                    </FitnessCardContent>
+                    </div>
                   </FitnessCard>
                 ))}
               </div>

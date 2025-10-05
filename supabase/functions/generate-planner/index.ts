@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    // Inicializa o cliente Supabase atuando EM NOME DO USUÁRIO
+    // 1. Cria o cliente Supabase que atua EM NOME DO USUÁRIO, passando seu token.
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
@@ -20,20 +20,23 @@ serve(async (req) => {
     );
 
     const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) throw new Error("Usuário não autenticado.");
+    if (!user) throw new Error("Usuário não autenticado. Token inválido ou expirado.");
 
     const { userInputs } = await req.json();
-    if (!userInputs) throw new Error("Dados do formulário não recebidos (userInputs).");
-    
-    // LÓGICA TRANSACIONAL: Verifica e deduz o crédito DENTRO da função
-    const { data: profile, error: profileError } = await supabaseClient.from('profiles').select('credits').single();
+    if (!userInputs) throw new Error("Dados do formulário não recebidos.");
+
+    // 2. Transação: Verifica e deduz o crédito DENTRO da função segura.
+    // Usamos um cliente com service_role para a transação para garantir que ela ocorra,
+    // mas baseada no user.id verificado, o que é seguro.
+    const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const { data: profile, error: profileError } = await supabaseAdmin.from('profiles').select('credits').eq('user_id', user.id).single();
     if (profileError || !profile) throw new Error("Perfil do usuário não encontrado.");
     if (profile.credits < 1) throw new Error("Créditos insuficientes.");
 
-    const { error: updateError } = await supabaseClient.from('profiles').update({ credits: profile.credits - 1 }).eq('user_id', user.id);
+    const { error: updateError } = await supabaseAdmin.from('profiles').update({ credits: profile.credits - 1 }).eq('user_id', user.id);
     if (updateError) throw updateError;
-
-    // Chama o N8N e processa a resposta corretamente
+    
+    // 3. Chama o N8N e processa a resposta corretamente.
     const n8nWebhookUrl = Deno.env.get('N8N_WEBHOOK_URL');
     if (!n8nWebhookUrl) throw new Error("URL do webhook do N8N não configurada.");
     
@@ -47,13 +50,13 @@ serve(async (req) => {
 
     const n8nResult = await n8nResponse.json();
     
-    // LÓGICA CRÍTICA DE PARSE
+    // 4. LÓGICA CRÍTICA DE PARSE: "Descasca" o JSON da string de output.
     if (!Array.isArray(n8nResult) || !n8nResult[0] || typeof n8nResult[0].output !== 'string') {
-      throw new Error('A resposta do N8N não está no formato esperado: [ { "output": "{...}" } ].');
+      throw new Error('A resposta do N8N não está no formato esperado.');
     }
     const finalAiOutputs = JSON.parse(n8nResult[0].output);
 
-    // Salva no banco de dados
+    // 5. Salva no histórico usando o cliente do usuário (que tem permissão RLS).
     const { data: plannerRecord, error: saveError } = await supabaseClient
       .from('planners_history')
       .insert({ user_id: user.id, user_inputs: userInputs, ai_outputs: finalAiOutputs })
@@ -62,7 +65,7 @@ serve(async (req) => {
 
     if (saveError) throw saveError;
 
-    // Retorna o ID para o frontend
+    // 6. Retorna o ID para o frontend.
     return new Response(JSON.stringify({ id: plannerRecord.id }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
